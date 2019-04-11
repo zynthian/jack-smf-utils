@@ -67,6 +67,7 @@ double		rate_limit = 0;
 int		just_one_output = 0;
 int		start_stopped = 0;
 int		use_transport = 1;
+int		loop_forever = 0;
 int		be_quiet = 0;
 volatile int	playback_started = -1, song_position = 0, ctrl_c_pressed = 0;
 smf_t		*smf = NULL;
@@ -270,10 +271,16 @@ process_midi_output(jack_nframes_t nframes)
 		smf_event_t *event = smf_peek_next_event(smf);
 
 		if (event == NULL) {
-			if (!be_quiet)
-				g_debug("End of song.");
-			playback_started = -1;
-
+			if (loop_forever) {
+				song_position = 0;
+				smf_seek_to_seconds(smf, nframes_to_seconds(song_position));
+				playback_started = jack_frame_time(jack_client);
+			}
+			else {
+				if (!be_quiet)
+					g_debug("End of song.");
+				playback_started = -1;
+			}
 			if (!use_transport)
 				ctrl_c_pressed = 1;
 
@@ -643,7 +650,7 @@ show_version(void)
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: jack-smf-player [-dnqstV] [ -a <input port>] [-r <rate>] file_name\n");
+	fprintf(stderr, "usage: jack-smf-player [-dnqstlV] [ -a <input port>] [-r <rate>] file_name\n");
 
 	exit(EX_USAGE);
 }
@@ -700,6 +707,10 @@ main(int argc, char *argv[])
 
 			case 't':
 				use_transport = 0;
+				break;
+
+			case 'l':
+				loop_forever = 1;
 				break;
 
 			case 'V':
