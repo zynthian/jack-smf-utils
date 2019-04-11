@@ -1,0 +1,2 @@
+SUBDIRS = libsmf src man
+
