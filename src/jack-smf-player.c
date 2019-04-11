@@ -279,11 +279,12 @@ process_midi_output(jack_nframes_t nframes)
 			else {
 				if (!be_quiet)
 					g_debug("End of song.");
-				playback_started = -1;
-			}
-			if (!use_transport)
-				ctrl_c_pressed = 1;
 
+				playback_started = -1;
+
+				if (!use_transport)
+					ctrl_c_pressed = 1;
+			}
 			break;
 		}
 
@@ -673,7 +674,7 @@ main(int argc, char *argv[])
 
 	g_log_set_default_handler(log_handler, NULL);
 
-	while ((ch = getopt(argc, argv, "a:dnqr:stV")) != -1) {
+	while ((ch = getopt(argc, argv, "a:dnqr:stlV")) != -1) {
 		switch (ch) {
 			case 'a':
 				autoconnect_port_name = strdup(optarg);
