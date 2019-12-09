@@ -72,6 +72,10 @@ int		be_quiet = 0;
 volatile int	playback_started = -1, song_position = 0, ctrl_c_pressed = 0;
 smf_t		*smf = NULL;
 
+double	song_bpm = 120.0;
+double	current_bpm = 120.0;
+static double last_frame_song_tsecs = 0;
+
 #ifdef WITH_LASH
 lash_client_t	*lash_client;
 #endif
@@ -155,7 +159,13 @@ nframes_to_ms(jack_nframes_t nframes)
 static double
 nframes_to_seconds(jack_nframes_t nframes)
 {
-	return nframes_to_ms(nframes) / 1000.0;
+	jack_nframes_t sr;
+
+	sr = jack_get_sample_rate(jack_client);
+
+	assert(sr > 0);
+
+	return nframes / (double)sr;
 }
 
 static jack_nframes_t
@@ -173,7 +183,13 @@ ms_to_nframes(double ms)
 static jack_nframes_t
 seconds_to_nframes(double seconds)
 {
-	return ms_to_nframes(seconds * 1000.0);
+	jack_nframes_t sr;
+
+	sr = jack_get_sample_rate(jack_client);
+
+	assert(sr > 0);
+
+	return (double)sr * seconds;
 }
 
 static void
@@ -207,12 +223,13 @@ send_all_sound_off(void *port_buffers[MAX_NUMBER_OF_TRACKS], jack_nframes_t nfra
 static void
 process_midi_output(jack_nframes_t nframes)
 {
-	int		i, t, bytes_remaining, track_number;
-	unsigned char  *buffer, tmp_status;
-	void		*port_buffers[MAX_NUMBER_OF_TRACKS];
-	jack_nframes_t	last_frame_time;
+	int i, t, bytes_remaining, track_number;
+	unsigned char *buffer, tmp_status;
+	void *port_buffers[MAX_NUMBER_OF_TRACKS];
+	//jack_nframes_t last_frame_time;
 	jack_transport_state_t transport_state;
 	static jack_transport_state_t previous_transport_state = JackTransportStopped;
+	jack_position_t transport_pos;
 
 	for (i = 0; i <= smf->number_of_tracks; i++) {
 		port_buffers[i] = jack_port_get_buffer(output_ports[i], nframes);
@@ -245,20 +262,18 @@ process_midi_output(jack_nframes_t nframes)
 	}
 
 	if (use_transport) {
-		transport_state = jack_transport_query(jack_client, NULL);
+		transport_state = jack_transport_query(jack_client, &transport_pos);
 		if (transport_state == JackTransportStopped) {
 			if (previous_transport_state == JackTransportRolling)
 				send_all_sound_off(port_buffers, nframes);
-
 			previous_transport_state = transport_state;
-
 			return;
 		}
-
 		previous_transport_state = transport_state;
+		update_bpm(&transport_pos);
 	}
 
-	last_frame_time = jack_last_frame_time(jack_client);
+	//last_frame_time = jack_last_frame_time(jack_client);
 
 	/* End of song already? */
 	if (playback_started < 0)
@@ -273,7 +288,8 @@ process_midi_output(jack_nframes_t nframes)
 		if (event == NULL) {
 			if (loop_forever) {
 				song_position = 0;
-				smf_seek_to_seconds(smf, nframes_to_seconds(song_position));
+				last_frame_song_tsecs = 0;
+				smf_seek_to_seconds(smf, last_frame_song_tsecs);
 				playback_started = jack_frame_time(jack_client);
 			}
 			else {
@@ -305,7 +321,12 @@ process_midi_output(jack_nframes_t nframes)
 			break;
 		}
 
-		t = seconds_to_nframes(event->time_seconds) + playback_started - song_position + nframes - last_frame_time;
+		//t = seconds_to_nframes(event->time_seconds*120/transport_pos.beats_per_minute) + playback_started - song_position + nframes - last_frame_time;
+		//g_debug("PosInfo: %fs + [%d - %d] + [%d - %d]", event->time_seconds,playback_started,song_position,nframes,last_frame_time);
+
+		t = seconds_to_nframes((event->time_seconds-last_frame_song_tsecs)*song_bpm/current_bpm);
+
+		//g_debug("PosInfo: %fs - %fs => %d (%f BPM)", event->time_seconds,last_frame_song_tsecs,t,current_bpm);
 
 		/* If computed time is too much into the future, we'll need
 		   to send it later. */
@@ -367,6 +388,8 @@ process_midi_output(jack_nframes_t nframes)
 
 		event->midi_buffer[0] = tmp_status;
 	}
+
+	last_frame_song_tsecs += nframes_to_seconds(nframes)*current_bpm/song_bpm;
 }
 
 static int 
@@ -395,16 +418,25 @@ process_callback(jack_nframes_t nframes, void *notused)
 	return 0;
 }
 
+void
+update_bpm(jack_position_t *position)
+{
+	if (position->beats_per_minute>0.0 && position->beats_per_minute!=current_bpm) {
+		current_bpm = position->beats_per_minute;
+		g_message("CURRENT BPM: %f",current_bpm);
+	}
+}
+
 static int
 sync_callback(jack_transport_state_t state, jack_position_t *position, void *notused)
 {
 	assert(jack_client);
 
-	/* XXX: We should probably adapt to external tempo changes. */
-
 	if (state == JackTransportStarting) {
+		update_bpm(position);
 		song_position = position->frame;
-		smf_seek_to_seconds(smf, nframes_to_seconds(position->frame));
+		last_frame_song_tsecs = nframes_to_seconds(position->frame)*current_bpm/song_bpm;
+		smf_seek_to_seconds(smf, last_frame_song_tsecs);
 
 		if (!be_quiet)
 			g_debug("Seeking to %f seconds.", nframes_to_seconds(position->frame));
@@ -529,7 +561,7 @@ init_jack(void)
 	if (use_transport) {
 		err = jack_set_sync_callback(jack_client, sync_callback, 0);
 		if (err) {
-			g_critical("Could not register JACK sync callback.");
+			g_critical("Could not register JACK sync callback.current_bpm");
 			exit(EX_UNAVAILABLE);
 		}
 #if 0
@@ -749,6 +781,16 @@ main(int argc, char *argv[])
 		g_warning("Number of tracks (%d) exceeds maximum for per-track output; implying '-s' option.", smf->number_of_tracks);
 		just_one_output = 1;
 	}
+
+	//Get Song Tempo (tempo reference)
+	if (smf->ppqn>0)
+		song_bpm = (double)smf->ppqn;
+	else if (smf->resolution>0)
+		song_bpm = (double)smf->frames_per_second/(double)smf->resolution;
+	else
+		song_bpm = 120.0;
+
+	g_message("SONG BPM: %f",song_bpm);
 
 #ifdef WITH_LASH
 	init_lash(lash_args);
