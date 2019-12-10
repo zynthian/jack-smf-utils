@@ -74,6 +74,7 @@ smf_t		*smf = NULL;
 
 double	song_bpm = 120.0;
 double	current_bpm = 120.0;
+double	bpm_ratio = 1.0;
 static double last_frame_song_tsecs = 0;
 
 #ifdef WITH_LASH
@@ -324,7 +325,7 @@ process_midi_output(jack_nframes_t nframes)
 		//t = seconds_to_nframes(event->time_seconds*120/transport_pos.beats_per_minute) + playback_started - song_position + nframes - last_frame_time;
 		//g_debug("PosInfo: %fs + [%d - %d] + [%d - %d]", event->time_seconds,playback_started,song_position,nframes,last_frame_time);
 
-		t = seconds_to_nframes((event->time_seconds-last_frame_song_tsecs)*song_bpm/current_bpm);
+		t = seconds_to_nframes((event->time_seconds-last_frame_song_tsecs)/bpm_ratio);
 
 		//g_debug("PosInfo: %fs - %fs => %d (%f BPM)", event->time_seconds,last_frame_song_tsecs,t,current_bpm);
 
@@ -389,7 +390,7 @@ process_midi_output(jack_nframes_t nframes)
 		event->midi_buffer[0] = tmp_status;
 	}
 
-	last_frame_song_tsecs += nframes_to_seconds(nframes)*current_bpm/song_bpm;
+	last_frame_song_tsecs += nframes_to_seconds(nframes)*bpm_ratio;
 }
 
 static int 
@@ -423,6 +424,7 @@ update_bpm(jack_position_t *position)
 {
 	if (position->beats_per_minute>0.0 && position->beats_per_minute!=current_bpm) {
 		current_bpm = position->beats_per_minute;
+		bpm_ratio = current_bpm/song_bpm;
 		g_message("CURRENT BPM: %f",current_bpm);
 	}
 }
@@ -435,7 +437,7 @@ sync_callback(jack_transport_state_t state, jack_position_t *position, void *not
 	if (state == JackTransportStarting) {
 		update_bpm(position);
 		song_position = position->frame;
-		last_frame_song_tsecs = nframes_to_seconds(position->frame)*current_bpm/song_bpm;
+		last_frame_song_tsecs = nframes_to_seconds(position->frame)*bpm_ratio;
 		smf_seek_to_seconds(smf, last_frame_song_tsecs);
 
 		if (!be_quiet)
