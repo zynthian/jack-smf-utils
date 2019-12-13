@@ -441,7 +441,7 @@ sync_callback(jack_transport_state_t state, jack_position_t *position, void *not
 		smf_seek_to_seconds(smf, last_frame_song_tsecs);
 
 		if (!be_quiet)
-			g_debug("Seeking to %f seconds.", nframes_to_seconds(position->frame));
+			g_debug("Seeking to %f seconds.", last_frame_song_tsecs);
 
 		playback_started = jack_frame_time(jack_client);
 
@@ -563,7 +563,7 @@ init_jack(void)
 	if (use_transport) {
 		err = jack_set_sync_callback(jack_client, sync_callback, 0);
 		if (err) {
-			g_critical("Could not register JACK sync callback.current_bpm");
+			g_critical("Could not register JACK sync callback.");
 			exit(EX_UNAVAILABLE);
 		}
 #if 0
@@ -784,16 +784,6 @@ main(int argc, char *argv[])
 		just_one_output = 1;
 	}
 
-	//Get Song Tempo (tempo reference)
-	if (smf->ppqn>0)
-		song_bpm = (double)smf->ppqn;
-	else if (smf->resolution>0)
-		song_bpm = (double)smf->frames_per_second/(double)smf->resolution;
-	else
-		song_bpm = 120.0;
-
-	g_message("SONG BPM: %f",song_bpm);
-
 #ifdef WITH_LASH
 	init_lash(lash_args);
 #endif
@@ -817,6 +807,17 @@ main(int argc, char *argv[])
 
 	if (!use_transport)
 		playback_started = jack_frame_time(jack_client);
+
+	//Get Song Tempo (tempo reference)
+	if (smf->ppqn>0)
+		song_bpm = (double)smf->ppqn;
+	else if (smf->resolution>0)
+		song_bpm = (double)smf->frames_per_second/(double)smf->resolution;
+	else
+		song_bpm = 120.0;
+
+	g_message("SONG BPM: %f",song_bpm);
+
 
 	g_main_loop_run(g_main_loop_new(NULL, TRUE));
 
