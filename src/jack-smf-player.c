@@ -221,6 +221,16 @@ send_all_sound_off(void *port_buffers[MAX_NUMBER_OF_TRACKS], jack_nframes_t nfra
 	}
 }
 
+void
+update_bpm(jack_position_t *position)
+{
+	if (position->beats_per_minute>0.0 && position->beats_per_minute!=current_bpm) {
+		current_bpm = position->beats_per_minute;
+		bpm_ratio = current_bpm/song_bpm;
+		g_message("CURRENT BPM: %f",current_bpm);
+	}
+}
+
 static void
 process_midi_output(jack_nframes_t nframes)
 {
@@ -305,11 +315,20 @@ process_midi_output(jack_nframes_t nframes)
 			break;
 		}
 
-		/* Skip over metadata events. */
+		/* Process metadata events. */
 		if (smf_event_is_metadata(event)) {
 			char *decoded = smf_event_decode(event);
 			if (decoded && !be_quiet)
 				g_debug("Metadata: %s", decoded);
+
+			/* Capture BPM setting */
+			if (event->midi_buffer[1]==0x51) {
+				int mspqn = (event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
+				//Set Song Tempo (tempo reference)
+				song_bpm = 60000000.0 / (double)mspqn;
+				update_bpm(&transport_pos);
+				g_message("SONG BPM: %f",song_bpm);
+			}
 
 			smf_get_next_event(smf);
 			continue;
@@ -322,12 +341,8 @@ process_midi_output(jack_nframes_t nframes)
 			break;
 		}
 
-		//t = seconds_to_nframes(event->time_seconds*120/transport_pos.beats_per_minute) + playback_started - song_position + nframes - last_frame_time;
-		//g_debug("PosInfo: %fs + [%d - %d] + [%d - %d]", event->time_seconds,playback_started,song_position,nframes,last_frame_time);
-
 		t = seconds_to_nframes((event->time_seconds-last_frame_song_tsecs)/bpm_ratio);
-
-		//g_debug("PosInfo: %fs - %fs => %d (%f BPM)", event->time_seconds,last_frame_song_tsecs,t,current_bpm);
+		g_debug("PosInfo: %fs - %fs => %d (%f BPM)", event->time_seconds,last_frame_song_tsecs,t,current_bpm);
 
 		/* If computed time is too much into the future, we'll need
 		   to send it later. */
@@ -417,16 +432,6 @@ process_callback(jack_nframes_t nframes, void *notused)
 #endif
 
 	return 0;
-}
-
-void
-update_bpm(jack_position_t *position)
-{
-	if (position->beats_per_minute>0.0 && position->beats_per_minute!=current_bpm) {
-		current_bpm = position->beats_per_minute;
-		bpm_ratio = current_bpm/song_bpm;
-		g_message("CURRENT BPM: %f",current_bpm);
-	}
 }
 
 static int
@@ -808,16 +813,8 @@ main(int argc, char *argv[])
 	if (!use_transport)
 		playback_started = jack_frame_time(jack_client);
 
-	//Get Song Tempo (tempo reference)
-	if (smf->ppqn>0)
-		song_bpm = (double)smf->ppqn;
-	else if (smf->resolution>0)
-		song_bpm = (double)smf->frames_per_second/(double)smf->resolution;
-	else
-		song_bpm = 120.0;
-
-	g_message("SONG BPM: %f",song_bpm);
-
+	//Flag client activation
+	g_message("Ready to Play...");
 
 	g_main_loop_run(g_main_loop_new(NULL, TRUE));
 
