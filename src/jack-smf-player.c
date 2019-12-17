@@ -342,7 +342,7 @@ process_midi_output(jack_nframes_t nframes)
 		}
 
 		t = seconds_to_nframes((event->time_seconds-last_frame_song_tsecs)/bpm_ratio);
-		g_debug("PosInfo: %fs - %fs => %d (%f BPM)", event->time_seconds,last_frame_song_tsecs,t,current_bpm);
+		//g_debug("PosInfo: %fs - %fs => %d (%f BPM)", event->time_seconds,last_frame_song_tsecs,t,current_bpm);
 
 		/* If computed time is too much into the future, we'll need
 		   to send it later. */
