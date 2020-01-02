@@ -60,22 +60,24 @@
 
 #define MAX_NUMBER_OF_TRACKS	128
 
-jack_port_t	*output_ports[MAX_NUMBER_OF_TRACKS];
-int		drop_messages = 0;
-jack_client_t	*jack_client = NULL;
-double		rate_limit = 0;
-int		just_one_output = 0;
-int		start_stopped = 0;
-int		use_transport = 1;
-int		loop_forever = 0;
-int		be_quiet = 0;
-volatile int	playback_started = -1, song_position = 0, ctrl_c_pressed = 0;
-smf_t		*smf = NULL;
+jack_port_t *output_ports[MAX_NUMBER_OF_TRACKS];
+jack_client_t *jack_client = NULL;
+smf_t *smf = NULL;
 
-double	song_bpm = 120.0;
-double	current_bpm = 120.0;
-double	bpm_ratio = 1.0;
-static double last_frame_song_tsecs = 0;
+int drop_messages = 0;
+double rate_limit = 0;
+int just_one_output = 0;
+int start_stopped = 0;
+int use_transport = 1;
+int loop_forever = 0;
+int be_quiet = 0;
+int ctrl_c_pressed = 0;
+double playback_started = -1;
+double song_position = 0;
+double song_bpm = 120.0;
+double current_bpm = 120.0;
+double bpm_ratio = 1.0;
+double last_frame_song_tsecs = 0;
 
 #ifdef WITH_LASH
 lash_client_t	*lash_client;
@@ -90,9 +92,9 @@ lash_client_t	*lash_client;
 double 
 get_time(void)
 {
-	double		seconds;
-	int		ret;
-	struct timeval	tv;
+	double seconds;
+	int ret;
+	struct timeval tv;
 
 	ret = gettimeofday(&tv, NULL);
 
@@ -109,9 +111,9 @@ get_time(void)
 double
 get_delta_time(void)
 {
-	static double	previously = -1.0;
-	double		now;
-	double		delta;
+	static double previously = -1.0;
+	double now;
+	double delta;
 
 	now = get_time();
 
@@ -459,7 +461,7 @@ sync_callback(jack_transport_state_t state, jack_position_t *position, void *not
 
 void timebase_callback(jack_transport_state_t state, jack_nframes_t nframes, jack_position_t *pos, int new_pos, void *notused)
 {
-	double min;		/* Minutes since frame 0. */
+	double min;			/* Minutes since frame 0. */
 	long abs_tick;		/* Ticks since frame 0. */
 	long abs_beat;		/* Beats since frame 0. */
 	smf_tempo_t *tempo;
@@ -698,8 +700,8 @@ usage(void)
 int 
 main(int argc, char *argv[])
 {
-	int		ch;
-	char		*file_name, *autoconnect_port_name = NULL;
+	int ch;
+	char *file_name, *autoconnect_port_name = NULL;
 
 #ifdef WITH_LASH
 	lash_args_t *lash_args;
@@ -822,4 +824,3 @@ main(int argc, char *argv[])
 
 	return 0;
 }
-
