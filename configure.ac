@@ -1,16 +1,17 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.61)
-AC_INIT([jack-smf-utils], [1.0], [trasz@FreeBSD.org])
+AC_PREREQ([2.71])
+AC_INIT([jack-smf-utils],[1.0],[trasz@FreeBSD.org])
 AM_INIT_AUTOMAKE([-Wall foreign])
 AC_CONFIG_SRCDIR([src/jack-smf-player.c])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_RANLIB
+AM_PROG_AR
 
 # Checks for libraries.
 AC_CHECK_LIB([m], [pow])
@@ -31,13 +32,12 @@ AS_IF([test "x$with_readline" != xno],
 		     ], -lncurses)])
 
 # Checks for header files.
-AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h stdlib.h string.h sys/time.h unistd.h])
+AC_CHECK_HEADERS([arpa/inet.h stdlib.h string.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_TYPE_INT8_T
-AC_HEADER_TIME
+
 AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_C_VOLATILE
@@ -46,15 +46,14 @@ AC_C_VOLATILE
 AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
 AC_FUNC_REALLOC
-AC_TYPE_SIGNAL
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([gettimeofday memset pow strdup strerror strtol])
 
-PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.2)
+PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.3)
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 
-PKG_CHECK_MODULES(GTHREAD, gthread-2.0 >= 2.2)
+PKG_CHECK_MODULES(GTHREAD, gthread-2.0 >= 2.3)
 AC_SUBST(GTHREAD_CFLAGS)
 AC_SUBST(GTHREAD_LIBS)
 
