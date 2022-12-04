@@ -427,8 +427,6 @@ main(int argc, char *argv[])
 	lash_args_t *lash_args;
 #endif
 
-	g_thread_init(NULL);
-
 #ifdef WITH_LASH
 	lash_args = lash_extract_args(&argc, &argv);
 #endif
