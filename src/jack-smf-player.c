@@ -89,7 +89,7 @@ lash_client_t	*lash_client;
 /* Will emit a warning if execution of jack callback takes longer than this. */
 #define MAX_PROCESSING_TIME	0.01
 
-double 
+double
 get_time(void)
 {
 	double seconds;
@@ -136,7 +136,7 @@ warning_async(gpointer s)
 {
 	const char *str = (const char *)s;
 
-	g_warning(str);
+	g_warning("%s", str);
 
 	return FALSE;
 }
@@ -264,7 +264,7 @@ process_midi_output(jack_nframes_t nframes)
 
 	if (ctrl_c_pressed) {
 		send_all_sound_off(port_buffers, nframes);
-		
+
 		/* The idea here is to exit at the second time process_midi_output gets called.
 		   Otherwise, All Sound Off won't be delivered. */
 		ctrl_c_pressed++;
@@ -410,7 +410,7 @@ process_midi_output(jack_nframes_t nframes)
 	last_frame_song_tsecs += nframes_to_seconds(nframes)*bpm_ratio;
 }
 
-static int 
+static int
 process_callback(jack_nframes_t nframes, void *notused)
 {
 #ifdef MEASURE_TIME
@@ -536,7 +536,7 @@ connect_to_input_port(const char *port)
 	return 0;
 }
 
-static void 
+static void
 init_jack(void)
 {
 	int i, err;
@@ -697,7 +697,7 @@ usage(void)
 	exit(EX_USAGE);
 }
 
-int 
+int
 main(int argc, char *argv[])
 {
 	int ch;

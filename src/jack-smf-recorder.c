@@ -72,7 +72,7 @@ lash_client_t	*lash_client;
 /* Will emit a warning if execution of jack callback takes longer than this. */
 #define MAX_PROCESSING_TIME	0.01
 
-double 
+double
 get_time(void)
 {
 	double		seconds;
@@ -119,7 +119,7 @@ warning_async(gpointer s)
 {
 	const char *str = (const char *)s;
 
-	g_warning(str);
+	g_warning("%s", str);
 
 	return FALSE;
 }
@@ -206,7 +206,7 @@ process_midi_input(jack_nframes_t nframes)
 	}
 }
 
-static int 
+static int
 process_callback(jack_nframes_t nframes, void *notused)
 {
 #ifdef MEASURE_TIME
@@ -259,7 +259,7 @@ connect_to_output_port(const char *port)
 	return 0;
 }
 
-void 
+void
 init_jack(void)
 {
 	int err;
@@ -417,7 +417,7 @@ usage(void)
 	exit(EX_USAGE);
 }
 
-int 
+int
 main(int argc, char *argv[])
 {
 	int		ch, i;
